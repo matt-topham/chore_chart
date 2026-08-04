@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#14213d">
+  <title>Chore History</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar compact-header">
+    <div>
+      <p class="eyebrow">Apartment routine</p>
+      <h1>Completion history</h1>
+    </div>
+    <a class="secondary-button" href="/">Back to chores</a>
+  </header>
+  <main>
+    <section class="history-card">
+      <div id="history-list" class="history-list"></div>
+    </section>
+  </main>
+  <script>
+    async function loadHistory() {
+      const list = document.getElementById('history-list');
+      try {
+        const response = await fetch('/api/history?limit=250');
+        const data = await response.json();
+        if (!data.history.length) {
+          list.innerHTML = '<div class="empty-state"><h3>No chores completed yet</h3><p>Completions will appear here.</p></div>';
+          return;
+        }
+        list.innerHTML = data.history.map(item => `
+          <article class="history-row">
+            <div>
+              <strong>${escapeHtml(item.task)}</strong>
+              <span>${escapeHtml(item.area)} · ${escapeHtml(item.frequency)}</span>
+            </div>
+            <time datetime="${item.completed_at}">${formatDate(item.completed_at)}</time>
+          </article>
+        `).join('');
+      } catch (error) {
+        list.innerHTML = '<div class="empty-state"><h3>Could not load history</h3><p>Check that the chore service is running.</p></div>';
+      }
+    }
+    function escapeHtml(value) {
+      const div = document.createElement('div');
+      div.textContent = value || '';
+      return div.innerHTML;
+    }
+    function formatDate(value) {
+      return new Intl.DateTimeFormat(undefined, {
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+        hour: 'numeric', minute: '2-digit'
+      }).format(new Date(value));
+    }
+    loadHistory();
+  </script>
+</body>
+</html>

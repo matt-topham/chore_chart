@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14213d">
+  <title>Apartment Chores</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Apartment routine</p>
+      <h1 id="today-title">Today</h1>
+      <p id="clock" class="clock"></p>
+    </div>
+    <div class="header-actions">
+      <a class="secondary-button" href="/history">History</a>
+      <button id="refresh-button" class="icon-button" aria-label="Refresh chores">↻</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="summary-card" aria-label="Daily progress">
+      <div class="summary-copy">
+        <span id="progress-label">Loading chores…</span>
+        <strong id="progress-percent">0%</strong>
+      </div>
+      <div class="progress-track">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+    </section>
+
+    <nav id="area-filters" class="filters" aria-label="Filter chores by area"></nav>
+
+    <section aria-labelledby="due-heading">
+      <div class="section-heading">
+        <h2 id="due-heading">Due now</h2>
+        <span id="due-count" class="count-badge">0</span>
+      </div>
+      <div id="due-list" class="chore-list"></div>
+      <div id="all-done" class="empty-state hidden">
+        <div class="empty-icon">✓</div>
+        <h3>Everything due is finished</h3>
+        <p>Nice work. Upcoming chores are shown below.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="upcoming-heading" class="upcoming-section">
+      <div class="section-heading">
+        <h2 id="upcoming-heading">Coming up</h2>
+        <span id="upcoming-count" class="count-badge muted">0</span>
+      </div>
+      <div id="upcoming-list" class="chore-list compact"></div>
+    </section>
+
+    <details class="completed-panel">
+      <summary>
+        Completed today
+        <span id="completed-count" class="count-badge complete">0</span>
+      </summary>
+      <div id="completed-list" class="chore-list compact"></div>
+    </details>
+  </main>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite">
+    <span id="toast-text">Chore completed</span>
+    <button id="undo-button">Undo</button>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

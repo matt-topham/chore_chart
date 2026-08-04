@@ -1,0 +1,8 @@
+[Unit]
+Description=Back up chore completion database
+
+[Service]
+Type=oneshot
+User=CHORE_USER
+WorkingDirectory=CHORE_PATH
+ExecStart=CHORE_PATH/scripts/backup.sh
