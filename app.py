@@ -3,15 +3,17 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from chore_app.env import load_env_file
 from chore_app.server import build_server
 
 BASE_DIR = Path(__file__).resolve().parent
+load_env_file(BASE_DIR / ".env")
 
 
 def main() -> None:
     host = os.environ.get("CHORE_HOST", "0.0.0.0")
     port = int(os.environ.get("CHORE_PORT", "5000"))
-    timezone_name = os.environ.get("CHORE_TIMEZONE", "America/Denver")
+    timezone_name = os.environ.get("CHORE_TIMEZONE", "America/Los_Angeles")
     database_path = BASE_DIR / os.environ.get("CHORE_DATABASE", "data/chore_touchscreen.db")
     workbook_path = BASE_DIR / os.environ.get("CHORE_WORKBOOK", "data/Apartment Routine.xlsx")
     upcoming_days = int(os.environ.get("CHORE_UPCOMING_DAYS", "7"))
