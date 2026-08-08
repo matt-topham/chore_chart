@@ -1,0 +1,17 @@
+[Unit]
+Description=Hey Bellamy Household Voice Assistant
+After=network-online.target sound.target chore-touchscreen.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=CHORE_USER
+WorkingDirectory=CHORE_PATH
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-CHORE_PATH/.env
+ExecStart=CHORE_PATH/.venv/bin/python -m voice_assistant.service
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
