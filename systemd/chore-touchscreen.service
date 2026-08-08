@@ -1,6 +1,7 @@
 [Unit]
 Description=Chore Touchscreen Web App
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
@@ -8,6 +9,7 @@ User=CHORE_USER
 WorkingDirectory=CHORE_PATH
 Environment=PYTHONUNBUFFERED=1
 Environment=CHORE_TIMEZONE=America/Denver
+EnvironmentFile=-CHORE_PATH/.env
 ExecStart=CHORE_PATH/.venv/bin/python CHORE_PATH/app.py
 Restart=on-failure
 RestartSec=5
