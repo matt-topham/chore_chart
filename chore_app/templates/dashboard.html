@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14213d">
+  <title>Home Dashboard</title>
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Home dashboard</p>
+      <h1 id="date-title">Today</h1>
+      <p id="clock" class="clock"></p>
+    </div>
+    <div id="hero-weather" class="hero-weather"><span class="weather-icon">—</span><strong>--°</strong></div>
+  </header>
+
+  <main class="dashboard">
+    <section class="card tasks-card">
+      <div class="card-title"><div><span class="kicker">Today</span><h2>Tasks</h2></div><a href="/tasks">View all →</a></div>
+      <div id="task-progress" class="progress-line"><span>Loading…</span><strong>0%</strong></div>
+      <div class="progress-track"><div id="progress-bar"></div></div>
+      <div id="today-tasks" class="list"></div>
+    </section>
+
+    <section class="card calendar-card">
+      <div class="card-title"><div><span class="kicker">Schedule</span><h2>Calendar</h2></div><button id="calendar-refresh" class="text-button">Refresh</button></div>
+      <div id="calendar-events" class="list"></div>
+    </section>
+
+    <section class="card weather-card">
+      <div class="card-title"><div><span class="kicker">Outside</span><h2>Weather</h2></div></div>
+      <div id="weather-current"></div>
+      <div id="forecast" class="forecast"></div>
+    </section>
+
+    <section class="card reminders-card">
+      <div class="card-title"><div><span class="kicker">Don't forget</span><h2>Reminders</h2></div><button class="round-add" data-open="reminder-dialog">+</button></div>
+      <div id="reminders" class="list"></div>
+    </section>
+
+    <section class="card upcoming-card">
+      <details>
+        <summary><span><span class="kicker">Next 7 days</span><strong>Upcoming household tasks</strong></span><span id="upcoming-count" class="badge">0</span></summary>
+        <div id="upcoming-tasks" class="list"></div>
+      </details>
+    </section>
+
+    <section class="card groceries-card">
+      <div class="card-title"><div><span class="kicker">Shopping</span><h2>Groceries</h2></div><button class="round-add" data-open="grocery-dialog">+</button></div>
+      <div id="groceries" class="list"></div>
+    </section>
+
+    <section class="card notes-card">
+      <div class="card-title"><div><span class="kicker">Household</span><h2>Quick notes</h2></div><button class="round-add" data-open="note-dialog">+</button></div>
+      <div id="notes" class="list"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <a class="active" href="/"><span>⌂</span>Home</a>
+    <a href="/tasks"><span>✓</span>Tasks</a>
+    <a href="#calendar-events"><span>▣</span>Calendar</a>
+    <a href="#groceries"><span>☰</span>Groceries</a>
+    <a href="/history"><span>↺</span>History</a>
+  </nav>
+
+  <dialog id="grocery-dialog"><form id="grocery-form"><h3>Add grocery</h3><input name="item" placeholder="Item" required><input name="quantity" placeholder="Quantity (optional)"><select name="category"><option>Produce</option><option>Dairy</option><option>Meat</option><option>Pantry</option><option>Frozen</option><option>Household</option><option selected>Other</option></select><div class="dialog-actions"><button type="button" data-close>Cancel</button><button type="submit" class="primary">Add</button></div></form></dialog>
+  <dialog id="reminder-dialog"><form id="reminder-form"><h3>Add reminder</h3><input name="title" placeholder="Reminder" required><input name="due_date" type="date" required><input name="notes" placeholder="Notes (optional)"><div class="dialog-actions"><button type="button" data-close>Cancel</button><button type="submit" class="primary">Add</button></div></form></dialog>
+  <dialog id="note-dialog"><form id="note-form"><h3>Add note</h3><textarea name="body" placeholder="Household note" required></textarea><div class="dialog-actions"><button type="button" data-close>Cancel</button><button type="submit" class="primary">Add</button></div></form></dialog>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>
