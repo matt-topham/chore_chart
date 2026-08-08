@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -18,7 +19,6 @@ def get_weather(timezone_name: str) -> dict:
     lon = os.environ.get("DASHBOARD_LONGITUDE", "").strip()
     if not lat or not lon:
         return {"configured": False, "error": "Set DASHBOARD_LATITUDE and DASHBOARD_LONGITUDE"}
-
     url = (
         "https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}&longitude={lon}"
@@ -31,30 +31,12 @@ def get_weather(timezone_name: str) -> dict:
         payload = json.loads(_fetch_text(url))
     except Exception as exc:
         return {"configured": True, "error": str(exc)}
-
     current = payload.get("current", {})
     daily = payload.get("daily", {})
     days = []
-    dates = daily.get("time", [])
-    for i, day in enumerate(dates):
-        days.append({
-            "date": day,
-            "code": _safe_index(daily.get("weather_code", []), i),
-            "high": _safe_index(daily.get("temperature_2m_max", []), i),
-            "low": _safe_index(daily.get("temperature_2m_min", []), i),
-            "rain_probability": _safe_index(daily.get("precipitation_probability_max", []), i),
-        })
-    return {
-        "configured": True,
-        "current": {
-            "temperature": current.get("temperature_2m"),
-            "feels_like": current.get("apparent_temperature"),
-            "code": current.get("weather_code"),
-            "precipitation": current.get("precipitation"),
-            "wind": current.get("wind_speed_10m"),
-        },
-        "daily": days,
-    }
+    for i, day in enumerate(daily.get("time", [])):
+        days.append({"date": day, "code": _safe_index(daily.get("weather_code", []), i), "high": _safe_index(daily.get("temperature_2m_max", []), i), "low": _safe_index(daily.get("temperature_2m_min", []), i), "rain_probability": _safe_index(daily.get("precipitation_probability_max", []), i)})
+    return {"configured": True, "current": {"temperature": current.get("temperature_2m"), "feels_like": current.get("apparent_temperature"), "code": current.get("weather_code"), "precipitation": current.get("precipitation"), "wind": current.get("wind_speed_10m")}, "daily": days}
 
 
 def _safe_index(values, index):
@@ -101,7 +83,6 @@ def get_calendar(timezone_name: str, days: int = 7) -> dict:
         lines = _unfold_ics(_fetch_text(url))
     except Exception as exc:
         return {"configured": True, "events": [], "error": str(exc)}
-
     events = []
     event: dict[str, str] | None = None
     for line in lines:
@@ -114,12 +95,7 @@ def get_calendar(timezone_name: str, days: int = 7) -> dict:
                 start = _parse_ics_datetime(event[start_key], start_key, local_tz)
                 if start.date() >= now.date() and start <= end_window:
                     all_day = "VALUE=DATE" in start_key or "T" not in event[start_key]
-                    events.append({
-                        "title": event.get("SUMMARY", "Untitled event").replace("\\,", ","),
-                        "start": start.isoformat(),
-                        "all_day": all_day,
-                        "location": event.get("LOCATION", "").replace("\\,", ","),
-                    })
+                    events.append({"title": event.get("SUMMARY", "Untitled event").replace("\\,", ","), "start": start.isoformat(), "all_day": all_day, "location": event.get("LOCATION", "").replace("\\,", ",")})
             except Exception:
                 pass
             event = None
@@ -128,6 +104,5 @@ def get_calendar(timezone_name: str, days: int = 7) -> dict:
             key, value = line.split(":", 1)
             if key.startswith(("DTSTART", "SUMMARY", "LOCATION")):
                 event[key] = value
-
     events.sort(key=lambda item: item["start"])
     return {"configured": True, "events": events[:20]}
