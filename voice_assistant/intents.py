@@ -151,7 +151,17 @@ class IntentHandler:
         if due is None:
             return AssistantResult(f"I couldn't understand the reminder date {when}.", "add_reminder", False)
         self.client.add_reminder(title, due.isoformat())
-        return AssistantResult(f"Reminder added for {due.strftime('%A, %B %-d')}: {title}.", "add_reminder")
+        return AssistantResult(f"Reminder added for {due.strftime('%A, %B')} {due.day}: {title}.", "add_reminder")
+
+    def _add_note(self, command: str) -> AssistantResult | None:
+        match = re.match(r"^(?:add|make|create) (?:a )?(?:household )?note(?: that)? (.+)$", command)
+        if not match:
+            return None
+        body = match.group(1).strip()
+        if not body:
+            return AssistantResult("I didn't hear the note.", "add_note", False)
+        self.client.add_note(body)
+        return AssistantResult("Household note added.", "add_note")
 
     def _parse_date(self, text: str) -> date | None:
         text = normalize(text)
@@ -189,8 +199,6 @@ class IntentHandler:
 
     def _calendar_query(self, command: str) -> AssistantResult | None:
         if "calendar" not in command and "schedule" not in command:
-            return None
-        if not any(word in command for word in ("what", "what's", "whats", "tell", "read", "calendar", "schedule")):
             return None
         target = datetime.now(self.timezone).date()
         label = "today"
