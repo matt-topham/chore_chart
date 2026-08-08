@@ -13,6 +13,7 @@ from pathlib import Path
 from chore_app.env import load_env_file
 from .client import DashboardClient
 from .intents import IntentHandler, normalize
+from .status import write_voice_status
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -23,7 +24,7 @@ ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 class BellamyVoiceService:
     def __init__(self):
         default_dashboard = f"http://127.0.0.1:{os.environ.get('CHORE_PORT', '5000')}"
-        self.dashboard_url = os.environ.get("VOICE_DASHBOARD_URL", default_dashboard)
+        self.dashboard_url = os.environ.get("VOICE_DASHBOARD_URL", "").strip() or default_dashboard
         self.timezone = os.environ.get("CHORE_TIMEZONE", "America/Los_Angeles")
         self.model = Path(os.environ.get("VOICE_WHISPER_MODEL", str(Path.home() / ".local/share/whisper.cpp/models/ggml-tiny.en.bin"))).expanduser()
         whisper_root = Path(os.environ.get("VOICE_WHISPER_DIR", str(Path.home() / ".local/share/whisper.cpp"))).expanduser()
@@ -44,6 +45,9 @@ class BellamyVoiceService:
         self.running = True
         self._wake_process: subprocess.Popen | None = None
 
+    def set_status(self, state: str, text: str = "") -> None:
+        write_voice_status(BASE_DIR, state, text)
+
     def validate(self) -> None:
         missing = []
         if not self.whisper_stream.is_file(): missing.append(str(self.whisper_stream))
@@ -55,6 +59,7 @@ class BellamyVoiceService:
 
     def stop(self, *_args) -> None:
         self.running = False
+        self.set_status("offline", "Bellamy stopped")
         if self._wake_process and self._wake_process.poll() is None:
             self._wake_process.terminate()
 
@@ -64,26 +69,37 @@ class BellamyVoiceService:
         signal.signal(signal.SIGINT, self.stop)
         print(f"Bellamy voice assistant ready. Wake phrase: {self.wake_aliases[0]!r}")
         print(f"Dashboard: {self.dashboard_url}")
+        self.set_status("idle", "Say Hey Bellamy")
         while self.running:
             try:
                 self._wait_for_wake()
                 if not self.running:
                     break
                 print("Wake phrase detected")
+                self.set_status("listening", "Listening for your command")
                 self.speak("Yes?")
                 command = self._listen_for_command()
                 if not command:
+                    self.set_status("error", "I didn't catch that")
                     self.speak("I didn't catch that.")
+                    time.sleep(1)
+                    self.set_status("idle", "Say Hey Bellamy")
                     continue
                 print(f"Command: {command}")
+                self.set_status("processing", command)
                 result = self.intents.handle(command)
                 print(f"Action: {result.action}; success={result.success}; response={result.spoken}")
+                self.set_status("done" if result.success else "error", result.spoken)
                 self.speak(result.spoken)
-                time.sleep(0.35)
+                time.sleep(1.25)
+                self.set_status("idle", "Say Hey Bellamy")
             except RuntimeError as exc:
                 print(f"Voice service error: {exc}")
+                self.set_status("error", str(exc))
                 self.speak("I ran into a problem.")
                 time.sleep(3)
+                if self.running:
+                    self.set_status("idle", "Say Hey Bellamy")
 
     def _wait_for_wake(self) -> None:
         command = [
