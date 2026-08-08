@@ -33,8 +33,38 @@ CREATE TABLE IF NOT EXISTS completions (
     UNIQUE(chore_id, completed_date)
 );
 
+CREATE TABLE IF NOT EXISTS groceries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'Other',
+    quantity TEXT NOT NULL DEFAULT '',
+    completed INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    due_date TEXT NOT NULL,
+    icon TEXT NOT NULL DEFAULT '🔔',
+    notes TEXT NOT NULL DEFAULT '',
+    completed INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_completions_chore_date
 ON completions(chore_id, completed_date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_reminders_due_date
+ON reminders(completed, due_date);
 """
 
 
