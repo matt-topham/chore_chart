@@ -10,16 +10,20 @@ import tempfile
 import time
 from pathlib import Path
 
+from chore_app.env import load_env_file
 from .client import DashboardClient
 from .intents import IntentHandler, normalize
 
 
+BASE_DIR = Path(__file__).resolve().parents[1]
+load_env_file(BASE_DIR / ".env")
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 
 
 class BellamyVoiceService:
     def __init__(self):
-        self.dashboard_url = os.environ.get("VOICE_DASHBOARD_URL", "http://127.0.0.1:8080")
+        default_dashboard = f"http://127.0.0.1:{os.environ.get('CHORE_PORT', '5000')}"
+        self.dashboard_url = os.environ.get("VOICE_DASHBOARD_URL", default_dashboard)
         self.timezone = os.environ.get("CHORE_TIMEZONE", "America/Los_Angeles")
         self.model = Path(os.environ.get("VOICE_WHISPER_MODEL", str(Path.home() / ".local/share/whisper.cpp/models/ggml-tiny.en.bin"))).expanduser()
         whisper_root = Path(os.environ.get("VOICE_WHISPER_DIR", str(Path.home() / ".local/share/whisper.cpp"))).expanduser()
