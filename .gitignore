@@ -5,3 +5,4 @@ data/*.db
 backups/
 .pytest_cache/
 .env
+chore_app/static/voice-status.json
