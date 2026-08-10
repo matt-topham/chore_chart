@@ -8,7 +8,11 @@ import signal
 import subprocess
 import tempfile
 import time
+import wave
 from pathlib import Path
+
+import numpy as np
+import sounddevice as sd
 
 from chore_app.env import load_env_file
 from .client import DashboardClient
@@ -31,7 +35,10 @@ class BellamyVoiceService:
         self.whisper_stream = Path(os.environ.get("VOICE_WHISPER_STREAM", str(whisper_root / "build/bin/whisper-stream"))).expanduser()
         self.whisper_cli = Path(os.environ.get("VOICE_WHISPER_CLI", str(whisper_root / "build/bin/whisper-cli"))).expanduser()
         self.capture_id = int(os.environ.get("VOICE_CAPTURE_ID", "0"))
-        self.alsa_device = os.environ.get("VOICE_ALSA_DEVICE", "default").strip() or "default"
+        configured_input = os.environ.get("VOICE_INPUT_DEVICE", "").strip()
+        legacy_input = os.environ.get("VOICE_ALSA_DEVICE", "").strip()
+        self.input_device_setting = configured_input or (legacy_input if legacy_input.lower() not in {"", "default"} else "")
+        self.input_device = self._resolve_input_device(self.input_device_setting)
         self.threads = int(os.environ.get("VOICE_THREADS", "4"))
         self.audio_ctx = int(os.environ.get("VOICE_AUDIO_CONTEXT", "512"))
         self.command_seconds = int(os.environ.get("VOICE_COMMAND_SECONDS", "6"))
@@ -45,6 +52,34 @@ class BellamyVoiceService:
         self.running = True
         self._wake_process: subprocess.Popen | None = None
 
+    @staticmethod
+    def _resolve_input_device(setting: str):
+        if not setting:
+            return None
+        if setting.isdigit():
+            index = int(setting)
+            info = sd.query_devices(index)
+            if info.get("max_input_channels", 0) <= 0:
+                raise RuntimeError(f"Audio device {index} has no input channels")
+            return index
+
+        needle = setting.casefold()
+        matches = []
+        for index, info in enumerate(sd.query_devices()):
+            if info.get("max_input_channels", 0) > 0 and needle in info.get("name", "").casefold():
+                matches.append((index, info.get("name", "")))
+        if not matches:
+            available = [info.get("name", "") for info in sd.query_devices() if info.get("max_input_channels", 0) > 0]
+            raise RuntimeError(f"Input device {setting!r} not found. Available inputs: {', '.join(available)}")
+        return matches[0][0]
+
+    def _input_device_info(self) -> dict:
+        try:
+            return dict(sd.query_devices(self.input_device, "input"))
+        except Exception as exc:
+            target = self.input_device_setting or "default input"
+            raise RuntimeError(f"Could not open {target}: {exc}") from exc
+
     def set_status(self, state: str, text: str = "") -> None:
         write_voice_status(BASE_DIR, state, text)
 
@@ -53,9 +88,10 @@ class BellamyVoiceService:
         if not self.whisper_stream.is_file(): missing.append(str(self.whisper_stream))
         if not self.whisper_cli.is_file(): missing.append(str(self.whisper_cli))
         if not self.model.is_file(): missing.append(str(self.model))
-        if shutil.which("arecord") is None: missing.append("arecord (install alsa-utils)")
         if missing:
             raise RuntimeError("Missing voice dependencies: " + ", ".join(missing))
+        info = self._input_device_info()
+        print(f"Command microphone: {info.get('name', 'unknown')} ({info.get('max_input_channels', 0)} input channels, {info.get('default_samplerate', '?')} Hz default)")
 
     def stop(self, *_args) -> None:
         self.running = False
@@ -147,14 +183,32 @@ class BellamyVoiceService:
     def _listen_for_command(self) -> str:
         with tempfile.TemporaryDirectory(prefix="bellamy-") as directory:
             wav_path = Path(directory) / "command.wav"
-            record = [
-                "arecord", "-q", "-D", self.alsa_device,
-                "-f", "S16_LE", "-r", "16000", "-c", "1",
-                "-d", str(self.command_seconds), "-t", "wav", str(wav_path),
-            ]
-            completed = subprocess.run(record, capture_output=True, text=True)
-            if completed.returncode != 0:
-                raise RuntimeError("Microphone recording failed: " + completed.stderr.strip())
+            info = self._input_device_info()
+            channels = 2 if int(info.get("max_input_channels", 1)) >= 2 else 1
+            rate = 16000
+            try:
+                recording = sd.rec(
+                    int(self.command_seconds * rate),
+                    samplerate=rate,
+                    channels=channels,
+                    dtype="int16",
+                    device=self.input_device,
+                )
+                sd.wait()
+            except Exception as exc:
+                raise RuntimeError(f"Microphone recording failed: {exc}") from exc
+
+            if channels > 1:
+                mono = recording.astype(np.int32).mean(axis=1).astype(np.int16)
+            else:
+                mono = recording[:, 0].astype(np.int16)
+
+            with wave.open(str(wav_path), "wb") as wav_file:
+                wav_file.setnchannels(1)
+                wav_file.setsampwidth(2)
+                wav_file.setframerate(rate)
+                wav_file.writeframes(mono.tobytes())
+
             return self._transcribe(wav_path)
 
     def _transcribe(self, wav_path: Path) -> str:
